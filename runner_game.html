@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Running Turtle Game</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+            background-color: #f0f8ff;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Running Turtle Game</h1>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <p>Press SPACE to jump over obstacles</p>
+    
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Game variables
+        let turtle = {
+            x: 50,
+            y: 300,
+            width: 40,
+            height: 20,
+            speed: 5,
+            isJumping: false,
+            jumpHeight: 15,
+            jumpCount: 15
+        };
+        
+        let obstacles = [];
+        let obstacleSpeed = 7;
+        let score = 0;
+        let gameOver = false;
+        let lastObstacleTime = 0;
+        let obstacleFrequency = 1500;
+        
+        // Game loop
+        function gameLoop(timestamp) {
+            if (gameOver) {
+                ctx.fillStyle = 'black';
+                ctx.font = '48px Arial';
+                ctx.fillText('Game Over!', canvas.width/2 - 120, canvas.height/2);
+                ctx.font = '24px Arial';
+                ctx.fillText(`Final Score: ${score}`, canvas.width/2 - 80, canvas.height/2 + 40);
+                return;
+            }
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw ground
+            ctx.fillStyle = 'green';
+            ctx.fillRect(0, 350, canvas.width, 50);
+            
+            // Handle jumping
+            if (turtle.isJumping) {
+                if (turtle.jumpCount >= -turtle.jumpHeight) {
+                    let neg = 1;
+                    if (turtle.jumpCount < 0) {
+                        neg = -1;
+                    }
+                    turtle.y -= (turtle.jumpCount ** 2) * 0.5 * neg;
+                    turtle.jumpCount -= 1;
+                } else {
+                    turtle.isJumping = false;
+                    turtle.jumpCount = turtle.jumpHeight;
+                    turtle.y = 300;
+                }
+            }
+            
+            // Generate obstacles
+            if (timestamp - lastObstacleTime > obstacleFrequency) {
+                const height = Math.random() > 0.5 ? 20 : 40;
+                obstacles.push({
+                    x: canvas.width,
+                    y: 350 - height,
+                    width: 30 + Math.random() * 40,
+                    height: height
+                });
+                lastObstacleTime = timestamp;
+                
+                // Increase difficulty
+                if (score > 0 && score % 5 === 0) {
+                    obstacleSpeed += 0.5;
+                    if (obstacleFrequency > 600) {
+                        obstacleFrequency -= 50;
+                    }
+                }
+            }
+            
+            // Move and draw obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].x -= obstacleSpeed;
+                
+                // Draw obstacle
+                ctx.fillStyle = 'brown';
+                ctx.fillRect(obstacles[i].x, obstacles[i].y, obstacles[i].width, obstacles[i].height);
+                
+                // Remove if off screen
+                if (obstacles[i].x + obstacles[i].width < 0) {
+                    obstacles.splice(i, 1);
+                    score++;
+                }
+                
+                // Collision detection
+                if (
+                    turtle.x < obstacles[i].x + obstacles[i].width &&
+                    turtle.x + turtle.width > obstacles[i].x &&
+                    turtle.y < obstacles[i].y + obstacles[i].height &&
+                    turtle.y + turtle.height > obstacles[i].y
+                ) {
+                    gameOver = true;
+                }
+            }
+            
+            // Draw turtle
+            ctx.fillStyle = 'blue';
+            ctx.beginPath();
+            ctx.ellipse(turtle.x + 20, turtle.y + 10, 20, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw turtle head
+            ctx.beginPath();
+            ctx.arc(turtle.x + 35, turtle.y + 10, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw legs
+            ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(turtle.x + 15, turtle.y + 15);
+            ctx.lineTo(turtle.x + 15, turtle.y + 25);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(turtle.x + 25, turtle.y + 15);
+            ctx.lineTo(turtle.x + 25, turtle.y + 25);
+            ctx.stroke();
+            
+            // Draw score
+            ctx.fillStyle = 'black';
+            ctx.font = '24px Arial';
+            ctx.fillText(`Score: ${score}`, 20, 30);
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !turtle.isJumping && !gameOver) {
+                turtle.isJumping = true;
+            }
+        });
+        
+        // Start game
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
